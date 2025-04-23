@@ -103,23 +103,6 @@ def train_model(model_name: str, X, y, pre, params):
     pipe.fit(X, y)
     return pipe
 
-
-def evaluate(model, X_test, y_test):
-    y_pred = model.predict(X_test)
-    scores = {
-        "accuracy": accuracy_score(y_test, y_pred),
-        "precision": precision_score(y_test, y_pred, average="weighted", zero_division=0),
-        "recall": recall_score(y_test, y_pred, average="weighted", zero_division=0),
-        "f1": f1_score(y_test, y_pred, average="weighted"),
-    }
-    try:
-        y_prob = model.predict_proba(X_test)
-        scores["roc_auc"] = roc_auc_score(y_test, y_prob, multi_class="ovo", average="weighted")
-    except Exception:
-        pass
-    cm = confusion_matrix(y_test, y_pred)
-    return scores, cm
-
 # --------------------------------- Streamlit UI --------------------------------- #
 
 st.set_page_config("Cirrhosis Prediction", "💊", layout="wide")
@@ -159,28 +142,8 @@ if param_json.strip():
 if st.sidebar.button("Train"):
     with st.spinner("Training model …"):
         model = train_model(model_name, X_tr, y_tr, pre, params)
-        scores, cm = evaluate(model, X_te, y_te)
     st.success("Done!")
-
-    # Metrics
-    cols = st.columns(len(scores))
-    for i, (k, v) in enumerate(scores.items()):
-        cols[i].metric(k, f"{v:.3f}")
-
-    # Confusion matrix plot
-    # Confusion matrix (suppress tick labels if too many)
-    fig, ax = plt.subplots(figsize=(4, 4))
-    if len(model.classes_) > 50:
-        disp = ConfusionMatrixDisplay(cm)
-        disp.plot(ax=ax, colorbar=False, include_values=True)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_title(f"Confusion matrix (labels hidden, {len(model.classes_)} classes)")
-    else:
-        disp = ConfusionMatrixDisplay(cm, display_labels=model.classes_)
-        disp.plot(ax=ax, colorbar=False, xticks_rotation=90)
-        st.pyplot(fig)
-
+    
     # Download model
     buf = io.BytesIO()
     import joblib
